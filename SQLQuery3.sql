@@ -70,3 +70,37 @@ WHEN Catergory_Score = 2 THEN 'Medium Growth'
 ELSE 'Low Growth'
 END AS Category
 FROM category_table;
+
+--Pivoting the unpivoted table on the basis of the indicator name to view the different macroeconomic indicators of the country
+SELECT [Country Name],[Official exchange rate (LCU per US$, period average)] exchange_rate,[ External debt stocks, long-term (DOD, current US$) ] External_Debt,[Population, total] Population,[Total reserves (includes gold, current US$)] Reserve,[GDP (current US$)] GDP,[Inflation, consumer prices (annual %)] Inflation,[GNI per capita, Atlas method (current US$)] GNI_per_capita,[External balance on goods and services (current US$)] External_Trade 
+INTO Yr_2021
+FROM
+  (SELECT [Country Name],[Indicator Name],[Year],[Value]
+   FROM UnpivotTable) AS unp
+PIVOT
+  (MAX([Value]) FOR [Indicator Name] IN
+    ([Official exchange rate (LCU per US$, period average)],[ External debt stocks, long-term (DOD, current US$) ],[Population, total],[Total reserves (includes gold, current US$)],[GDP (current US$)],[Inflation, consumer prices (annual %)],[GNI per capita, Atlas method (current US$)],[External balance on goods and services (current US$)]
+)) pivoted_table
+WHERE Year=2021;
+
+--Creating the report view of the macroeconomic indicators and converting it to a comparable basis /population if needed.
+WITH Report AS (
+SELECT [Country Name],exchange_rate,(External_Debt/Population) Debt_per_capita,(Reserve/Population) Reserve_per_capita,(GDP/Population) GDP_per_capita,Inflation,GNI_per_capita
+FROM Yr_2021)
+SELECT [Country Name],
+	Inflation,
+RANK() OVER(ORDER BY Inflation ASC) Rank_Inflation,
+	Debt_per_capita,
+RANK() OVER(ORDER BY Debt_per_capita ASC) Rank_Debt,
+	GNI_per_capita,
+RANK() OVER(ORDER BY GNI_per_capita DESC) Rank_GNI,
+	Reserve_per_capita,
+RANK() OVER(ORDER BY Reserve_per_capita DESC) Rank_Reserve,
+	GDP_per_capita,
+RANK() OVER(ORDER BY GDP_per_capita DESC) Rank_Reserve
+FROM Report
+WHERE Inflation<>0 AND
+	Debt_per_capita<>0 AND
+	GNI_per_capita<>0 AND
+	Reserve_per_capita<>0 AND
+	GDP_per_capita<>0;
